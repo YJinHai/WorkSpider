@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+twisted = {path = "D:/Program/Python/whl/Twisted-18.9.0-cp37-cp37m-win_amd64.whl"}
+scrapy = "*"
+requests = "*"
+fonttools = "*"
+fake-useragent = "*"
+pycares = {path = "D:/Program/Python/whl/pycares-2.3.0-cp37-cp37m-win_amd64.whl"}
+proxybroker = "*"
+pymysql = "*"
+"pypiwin32" = "*"
+pandas = "*"
+xlwt = "*"
+openpyxl = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.7"
