@@ -9,17 +9,25 @@ import datetime
 import re
 
 import scrapy
+from elasticsearch_dsl import connections
 from scrapy.loader import ItemLoader, wrap_loader_context
 from scrapy.loader.processors import MapCompose, TakeFirst, Join
 from scrapy.utils.datatypes import MergeDict
 from scrapy.utils.misc import arg_to_iter
 from w3lib.html import remove_tags
 
+from es_tuils import generate_suggests
+from sites.lagou.es import LagouIndex
+from sites.shixiseng.es import ShixisengIndex
 from utils.Shixiseng_encode import ShiXi
-from utils.common import extract_num
+from utils.common import extract_num, real_time_count
 
+es_lagou_job = connections.create_connection(LagouIndex)
+es_shixiseng_job = connections.create_connection(ShixisengIndex)
+JOB_COUNT_INIT = 0
 
 SQL_DATETIME_FORMAT = "%Y-%m-%d"
+
 
 class WorkspiderItem(scrapy.Item):
     # define the fields for your item here like:
@@ -35,7 +43,7 @@ class TakeFirstCustom(TakeFirst):
 
 
 class MapComposeCustom(MapCompose):
-    #自定义MapCompose，当value没元素时传入" "
+    # 自定义MapCompose，当value没元素时传入" "
     def __call__(self, value, loader_context=None):
         if not value:
             value.append(" ")
@@ -60,7 +68,6 @@ class ShixiJobItemLoader(ItemLoader):
 
 
 def date_convert(value):
-    print('date_convert')
     value = value.split(' ')[0]
     try:
         create_date = datetime.datetime.strptime(value, "%Y-%m-%d").date()
@@ -119,7 +126,7 @@ class ShixiJobItem(scrapy.Item):
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 
-        params =(
+        params = (
             self["url_obj_id"], self["job_name"], self["job_url"], self["job_date"],
             self["job_money"], self["job_position"], self["job_academic"], self["job_week"],
             self["job_time"], self["job_good"], self["job_detail"], self["job_com_name"],
@@ -127,6 +134,33 @@ class ShixiJobItem(scrapy.Item):
         )
 
         return insert_sql, params
+
+    def save_to_es(self):
+        job = ShixisengIndex(meta={'id': self['url_obj_id']})
+        job.url_obj_id = self["url_obj_id"]
+        job.job_url = self["job_url"]
+        job.job_name = self["job_name"]
+        job.job_date = self["job_date"]
+        job.job_money = self["job_money"]
+        job.job_position = self["job_position"]
+        job.job_academic = self["job_academic"]
+        job.job_week = self["job_week"]
+        job.job_time = self["job_time"]
+        job.job_good = self["job_good"]
+        job.job_detail = self["job_detail"]
+        job.job_com_name = self["job_com_name"]
+        job.job_com_msg = self["job_com_msg"]
+        job.job_link = self["job_link"]
+        job.job_till = self["job_till"]
+        # job.crawl_time = self["crawl_time"]
+
+        job.suggest = generate_suggests(es_shixiseng_job, "shixiseng_job",
+                                        ((job.job_name, 10), (job.job_good, 7),
+                                         (job.job_com_name, 8), (job.job_academic, 3)))
+
+        # real_time_count('lagou_job_count', JOB_COUNT_INIT)
+
+        job.save()
 
 
 class LagouJobItemLoader(ItemLoader):
@@ -142,6 +176,8 @@ class LagouItem(scrapy.Item):
     url_obj_id = scrapy.Field()
 
     description = scrapy.Field()
+
+    lables = scrapy.Field()
 
     # 城市
     city = scrapy.Field()
@@ -178,19 +214,22 @@ class LagouItem(scrapy.Item):
         input_processor=MapCompose(date_convert)
     )
 
-    crawl_time = scrapy.Field()
+    crawl_time = scrapy.Field(
+        input_processor=MapCompose(date_convert)
+    )
 
     def get_insert_sql(self):
         insert_sql = """
-                    insert IGNORE into lagou_job(url_obj_id, url, position_name, salary, description, city, work_year, company_full_name,
+                    insert IGNORE into lagou_job(url_obj_id, url, position_name, lables, salary, description, city, work_year, company_full_name,
                     company_size, district, education, linestaion, job_nature, create_time,
-                    crawl_time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    crawl_time) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
 
         sql_params = (
             self["url_obj_id"],
             self["url"],
             self["position_name"],
+            self['lables'],
             self["salary"],
             self["description"],
             self["city"],
@@ -207,3 +246,29 @@ class LagouItem(scrapy.Item):
 
         return insert_sql, sql_params
 
+    def save_to_es(self):
+        job = LagouIndex(meta={'id': self['url_obj_id']})
+        job.url_obj_id = self["url_obj_id"]
+        job.url = self["url"]
+        job.position_name = self["position_name"]
+        job.lables = self['lables']
+        job.salary = self["salary"]
+        job.description = self["description"]
+        job.city = self["city"]
+        job.work_years = self["work_year"]
+        job.company_full_name = self["company_full_name"]
+        job.company_size = self["company_size"]
+        job.district = self["district"]
+        job.education = self["education"]
+        job.linestaion = self["linestaion"]
+        job.job_nature = self["job_nature"]
+        job.create_time = self["create_time"]
+        job.crawl_time = self["crawl_time"]
+
+        job.suggest = generate_suggests(es_lagou_job, "lagou_job",
+                                        ((job.position_name, 10), (job.lables, 7), (job.job_nature, 6),
+                                         (job.linestaion, 3), (job.company_full_name, 8), (job.description, 5),
+                                         (job.city, 9)))
+        # real_time_count('lagou_job_count', JOB_COUNT_INIT)
+
+        job.save()

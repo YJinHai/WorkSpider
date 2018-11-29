@@ -80,11 +80,12 @@ class LagouSpider(CrawlSpider):
     def detail_parse(self, response):
 
         item = response.meta['item']
-        des = response.css('.job_bt div p::text').extract()
+        des = response.css('.job_bt div p').extract()
         item['description'] = ",".join(des)
 
         each = response.meta['each']
         item['url_obj_id'] = get_md5(item['url'])
+        item['lables'] = ",".join(each['positionLables'])
         item['city'] = each['city']
         item['company_full_name'] = each['companyFullName']
         item['company_size'] = each['companySize']

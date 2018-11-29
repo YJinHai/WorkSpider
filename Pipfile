@@ -16,6 +16,10 @@ pymysql = "*"
 pandas = "*"
 xlwt = "*"
 openpyxl = "*"
+elasticsearch-dsl = "*"
+redis = "*"
+scrapyd = "*"
+scrapyd-client = "*"
 
 [dev-packages]
 

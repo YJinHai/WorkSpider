@@ -71,7 +71,9 @@ DOWNLOADER_MIDDLEWARES = {
 ITEM_PIPELINES = {
    # 'WorkSpider.pipelines.WorkspiderPipeline': 300,
    # 'WorkSpider.pipelines.MysqlPipeline': 100,
+   'WorkSpider.pipelines.ElasticSearchPipeline': 98,
    'WorkSpider.pipelines.MysqlTwistedPipline': 99,
+
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
