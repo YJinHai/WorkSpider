@@ -6,7 +6,6 @@
 # http://doc.scrapy.org/en/latest/topics/items.html
 
 import datetime
-import re
 
 import scrapy
 from elasticsearch_dsl import connections
@@ -14,13 +13,13 @@ from scrapy.loader import ItemLoader, wrap_loader_context
 from scrapy.loader.processors import MapCompose, TakeFirst, Join
 from scrapy.utils.datatypes import MergeDict
 from scrapy.utils.misc import arg_to_iter
-from w3lib.html import remove_tags
 
-from es_tuils import generate_suggests
+from utils.es_tuils import generate_suggests
 from sites.lagou.es import LagouIndex
 from sites.shixiseng.es import ShixisengIndex
+
 from utils.Shixiseng_encode import ShiXi
-from utils.common import extract_num, real_time_count
+from utils.common import extract_num
 
 es_lagou_job = connections.create_connection(LagouIndex)
 es_shixiseng_job = connections.create_connection(ShixisengIndex)
